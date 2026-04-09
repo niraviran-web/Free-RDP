@@ -1,0 +1,30 @@
+name: High Speed Gaming RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 9999
+
+    steps:
+    - name: Enable RDP & Download Tools
+      run: |
+        echo "Setting up RDP Environment..."
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "MyStrongPassword123" -Force)
+        net user administrator MyStrongPassword123
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+        Set-Service TermService -StartupType Automatic
+        Start-Service TermService
+        echo "Downloading Chrome, 7zip, Steam..."
+        irm https://raw.githubusercontent.com/hellcatz/gamingrdp/main/install.ps1 | iex
+        echo "RDP Ready!"
+
+    - name: Setup Tailscale (for access)
+      run: |
+        echo "Installing Tailscale..."
+        Invoke-WebRequest https://pkgs.tailscale.com/stable/tailscale-setup.exe -OutFile tailscale-setup.exe
+        Start-Process .\tailscale-setup.exe -Wait
+        tailscale up --authkey=${{ secrets.TAILSCALE_KEY }} --hostname=FreeGamingPC
